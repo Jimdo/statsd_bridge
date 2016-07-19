@@ -22,6 +22,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
@@ -324,7 +325,7 @@ func (l *StatsDListener) Listen(e chan<- Events) {
 	}
 }
 
-func parseDogStatsDTagsToLabels(component string) map[string]string {
+func parseDogStatsDTagsToLabels(component string) (map[string]string, error) {
 	labels := map[string]string{}
 	networkStats.WithLabelValues("dogstatsd_tags").Inc()
 	tags := strings.Split(component, ",")
@@ -338,9 +339,16 @@ func parseDogStatsDTagsToLabels(component string) map[string]string {
 			continue
 		}
 
+		if !utf8.ValidString(kv[1]) {
+			networkStats.WithLabelValues("malformed_dogstatsd_tag_value").Inc()
+			err := fmt.Errorf("Invalid UTF8 in DogStatsD tag %s in component %s", t, component)
+			log.Error(err)
+			return nil, err
+		}
+
 		labels[escapeMetricName(kv[0])] = kv[1]
 	}
-	return labels
+	return labels, nil
 }
 
 func (l *StatsDListener) handlePacket(packet []byte, e chan<- Events) {
@@ -408,7 +416,10 @@ func (l *StatsDListener) handlePacket(packet []byte, e chan<- Events) {
 						}
 						value /= samplingFactor
 					case '#':
-						labels = parseDogStatsDTagsToLabels(component)
+						labels, err = parseDogStatsDTagsToLabels(component)
+						if err != nil {
+							continue samples
+						}
 					default:
 						log.Errorf("Invalid sampling factor or tag section %s on line %s", components[2], line)
 						networkStats.WithLabelValues("invalid_sample_factor").Inc()
