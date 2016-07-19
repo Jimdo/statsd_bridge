@@ -343,7 +343,7 @@ func parseDogStatsDTagsToLabels(component string) (map[string]string, error) {
 			networkStats.WithLabelValues("malformed_dogstatsd_tag_value").Inc()
 			err := fmt.Errorf("Invalid UTF8 in DogStatsD tag %s in component %s", t, component)
 			log.Error(err)
-			return map[string]string{}, err
+			return nil, err
 		}
 
 		labels[escapeMetricName(kv[0])] = kv[1]
