@@ -137,22 +137,6 @@ func TestHandlePacket(t *testing.T) {
 				},
 			},
 		}, {
-			name: "datadog tag extension with invalid utf8 tag values",
-			in:   "foo:100|c|@0.1|#tag:\xc3\x28invalid",
-		}, {
-			name: "datadog tag extension with both valid and invalid utf8 tag values",
-			in:   "foo:100|c|@0.1|#tag1:valid,tag2:\xc3\x28invalid",
-		}, {
-			name: "multiple metrics with invalid datadog utf8 tag values",
-			in:   "foo:200|c|#tag:value\nfoo:300|c|#tag:\xc3\x28invalid",
-			out: Events{
-				&CounterEvent{
-					metricName: "foo",
-					value:      200,
-					labels:     map[string]string{"tag": "value"},
-				},
-			},
-		}, {
 			name: "combined multiline metrics",
 			in:   "foo:200|ms:300|ms:5|c|@0.1:6|g\nbar:1|c:5|ms",
 			out: Events{
